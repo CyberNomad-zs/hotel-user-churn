@@ -11,11 +11,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
+import com.tps.springboot.common.RoleEnum;
 import com.tps.springboot.entity.User;
+import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.service.IRoleService;
 import com.tps.springboot.service.IUserService;
 import com.tps.springboot.controller.dto.UserDTO;
 import com.tps.springboot.controller.dto.UserPasswordDTO;
+import com.tps.springboot.utils.TokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -165,6 +168,7 @@ public class UserController {
      */
     @GetMapping("/export")
     public void export(HttpServletResponse response) throws Exception {
+        requireAdmin();
         // 从数据库查询出所有的数据
         List<User> list = userService.list();
         // 通过工具类创建writer 写出到磁盘路径
@@ -203,6 +207,7 @@ public class UserController {
      */
     @PostMapping("/import")
     public Result imp(MultipartFile file) throws Exception {
+        requireAdmin();
         InputStream inputStream = file.getInputStream();
         ExcelReader reader = ExcelUtil.getReader(inputStream);
         // 方式1：(推荐) 通过 javabean的方式读取Excel内的对象，但是要求表头必须是英文，跟javabean的属性要对应起来
@@ -225,6 +230,13 @@ public class UserController {
 
         userService.saveBatch(users);
         return Result.success(true);
+    }
+
+    private void requireAdmin() {
+        User currentUser = TokenUtils.getCurrentUser();
+        if (currentUser == null || !RoleEnum.ROLE_ADMIN.name().equals(currentUser.getRole())) {
+            throw new ServiceException(Constants.CODE_401, "权限不足");
+        }
     }
 
 }
