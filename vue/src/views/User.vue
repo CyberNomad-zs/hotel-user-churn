@@ -21,7 +21,7 @@
       >
         <el-button type="danger" slot="reference">批量删除 <i class="el-icon-remove-outline"></i></el-button>
       </el-popconfirm>
-      <el-upload :action="'http://' + serverIp + ':9090/user/import'" :show-file-list="false" accept="xlsx" :on-success="handleExcelImportSuccess" style="display: inline-block">
+      <el-upload :action="'http://' + serverIp + ':9090/user/import'" :headers="uploadHeaders" :show-file-list="false" accept="xlsx" :on-success="handleExcelImportSuccess" style="display: inline-block">
         <!--<el-button type="primary" class="ml-5">导入 <i class="el-icon-bottom"></i></el-button>-->
       </el-upload>
       <el-button type="primary" @click="exp" class="ml-5">导出 <i class="el-icon-top"></i></el-button>
@@ -137,6 +137,12 @@ export default {
       }
     }
   },
+  computed: {
+    uploadHeaders() {
+      const user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null
+      return user && user.token ? { token: user.token } : {}
+    }
+  },
   created() {
     this.load()
   },
@@ -223,7 +229,15 @@ export default {
       this.load()
     },
     exp() {
-      window.open(`http://${serverIp}:9090/user/export`)
+      this.request.get("/user/export", { responseType: "blob" }).then(res => {
+        const blob = new Blob([res], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = "用户信息.xlsx"
+        link.click()
+        window.URL.revokeObjectURL(url)
+      })
     },
     handleExcelImportSuccess() {
       this.$message.success("导入成功")
