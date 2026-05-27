@@ -1,6 +1,7 @@
 package com.tps.springboot.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -107,6 +108,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public void saveUpdateUser(User user) {
+        preparePasswordForSave(user);
         LambdaQueryWrapper<Role> roleLambdaQueryWrapper = new LambdaQueryWrapper<>();
         String role = user.getRole();
         roleLambdaQueryWrapper.eq(Role::getFlag,role);
@@ -119,6 +121,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             userMapper.insert(user);
         }
         userMapper.updateById(user);
+    }
+
+    void preparePasswordForSave(User user) {
+        if (StrUtil.isBlank(user.getPassword())) {
+            user.setPassword(null);
+            return;
+        }
+
+        User existing = user.getId() == null ? null : userMapper.selectById(user.getId());
+        if (existing != null && user.getPassword().equals(existing.getPassword())) {
+            user.setPassword(null);
+            return;
+        }
+
+        user.setPassword(SecureUtil.md5(user.getPassword()));
     }
 
 
