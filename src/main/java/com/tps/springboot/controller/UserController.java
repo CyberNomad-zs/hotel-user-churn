@@ -16,6 +16,7 @@ import com.tps.springboot.service.IRoleService;
 import com.tps.springboot.service.IUserService;
 import com.tps.springboot.controller.dto.UserDTO;
 import com.tps.springboot.controller.dto.UserPasswordDTO;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -71,7 +72,6 @@ public class UserController {
     @PostMapping("/saveUpdateUser")
     public Result saveUpdateUser(@RequestBody User user) {
 
-        user.setPassword(SecureUtil.md5(user.getPassword()));
         userService.saveUpdateUser(user);
         return Result.success();
     }
@@ -165,6 +165,7 @@ public class UserController {
      */
     @GetMapping("/export")
     public void export(HttpServletResponse response) throws Exception {
+        AuthUtils.requireLogin();
         // 从数据库查询出所有的数据
         List<User> list = userService.list();
         // 通过工具类创建writer 写出到磁盘路径
@@ -203,6 +204,7 @@ public class UserController {
      */
     @PostMapping("/import")
     public Result imp(MultipartFile file) throws Exception {
+        AuthUtils.requireLogin();
         InputStream inputStream = file.getInputStream();
         ExcelReader reader = ExcelUtil.getReader(inputStream);
         // 方式1：(推荐) 通过 javabean的方式读取Excel内的对象，但是要求表头必须是英文，跟javabean的属性要对应起来

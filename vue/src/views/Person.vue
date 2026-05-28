@@ -4,6 +4,7 @@
       <el-upload
           class="avatar-uploader"
           :action="'http://' + serverIp +':9090/file/upload'"
+          :headers="uploadHeaders"
           :show-file-list="false"
           :on-success="handleAvatarSuccess"
       >
@@ -46,6 +47,11 @@ export default {
       serverIp: serverIp,
       form: {},
       user: localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : {}
+    }
+  },
+  computed: {
+    uploadHeaders() {
+      return this.user && this.user.token ? { token: this.user.token } : {}
     }
   },
   created() {

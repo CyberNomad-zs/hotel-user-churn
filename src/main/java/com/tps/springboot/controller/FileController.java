@@ -1,12 +1,15 @@
 package com.tps.springboot.controller;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.Files;
+import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.mapper.FileMapper;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -49,8 +53,9 @@ public class FileController {
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        File uploadFile = new File(fileUploadPath + originalFilename);
+        AuthUtils.requireLogin();
+        String originalFilename = getSafeFileName(file.getOriginalFilename());
+        File uploadFile = resolveUploadFile(originalFilename);
         File parentFile = uploadFile.getParentFile();
         if(!parentFile.exists()) {
             parentFile.mkdirs();
@@ -70,7 +75,7 @@ public class FileController {
     @GetMapping("/{fileUUID}")
     public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(fileUploadPath + fileUUID);;
+        File uploadFile = resolveUploadFile(fileUUID);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
         response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
@@ -97,6 +102,7 @@ public class FileController {
 //    @CachePut(value = "files", key = "'frontAll'")
     @PostMapping("/update")
     public Result update(@RequestBody Files files) {
+        AuthUtils.requireLogin();
         System.out.println("cccc"+files.getName());
         fileMapper.updateById(files);
         flushRedis(Constants.FILES_KEY);
@@ -105,6 +111,7 @@ public class FileController {
 
     @GetMapping("/detail/{id}")
     public Result getById(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         return Result.success(fileMapper.selectById(id));
     }
 
@@ -112,6 +119,7 @@ public class FileController {
 //    @CacheEvict(value="files",key="'frontAll'")
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         fileMapper.deleteById(id);
         flushRedis(Constants.FILES_KEY);
         return Result.success();
@@ -119,6 +127,7 @@ public class FileController {
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        AuthUtils.requireLogin();
         // select * from sys_file where id in (id,id,id...)
         QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
         queryWrapper.in("id", ids);
@@ -139,6 +148,7 @@ public class FileController {
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") String name) {
+        AuthUtils.requireLogin();
         QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
         // 查询未删除的记录
         queryWrapper.eq("is_delete", false);
@@ -156,6 +166,28 @@ public class FileController {
     // 删除缓存
     private void flushRedis(String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    private File resolveUploadFile(String fileName) throws IOException {
+        String safeFileName = getSafeFileName(fileName);
+        File uploadDir = new File(fileUploadPath);
+        Path uploadRoot = uploadDir.getCanonicalFile().toPath();
+        File uploadFile = new File(uploadDir, safeFileName);
+        Path resolvedPath = uploadFile.getCanonicalFile().toPath();
+        if (!resolvedPath.startsWith(uploadRoot)) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return uploadFile;
+    }
+
+    private String getSafeFileName(String fileName) {
+        if (StrUtil.isBlank(fileName)
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return fileName;
     }
 
 }
