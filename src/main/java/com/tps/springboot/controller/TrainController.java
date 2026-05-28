@@ -4,9 +4,9 @@ import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.Files;
 import com.tps.springboot.service.ITrainService;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -41,6 +41,7 @@ public class TrainController  {
      */
     @PostMapping("/upload")
     public Result uploadTrainFile(@RequestParam MultipartFile file) throws Exception {
+        AuthUtils.requireLogin();
 
         if(null == file)
         {
@@ -62,6 +63,7 @@ public class TrainController  {
     //@Async
     @GetMapping("/getUrl/{url}/{type}")
     public Result beginTrain(@PathVariable String url, @PathVariable String type) throws IOException {
+        AuthUtils.requireLogin();
         System.out.println("***********URL********");
         System.out.println(url);
         System.out.println("***********type********");
@@ -89,9 +91,9 @@ public class TrainController  {
      * @return
      * @throws IOException
      */
-    @Async
     @GetMapping("/analyze/{url}")
     public Result beginAnalyze(@PathVariable String url) throws IOException {
+        AuthUtils.requireLogin();
         System.out.println("***********URL********");
         System.out.println(url);
         System.out.println("开始多线程,这是模型评估********");
@@ -113,6 +115,7 @@ public class TrainController  {
     //@Async
     @GetMapping("/dataAnalyze/{url}")
     public Result beginDataAnalyze(@PathVariable String url) throws IOException {
+        AuthUtils.requireLogin();
         System.out.println("***********URL********");
         System.out.println(url);
         System.out.println("开始数据分析********");
@@ -157,6 +160,7 @@ public class TrainController  {
     //    @CachePut(value = "files", key = "'frontAll'")
     @PostMapping("/update")
     public Result update(@RequestBody Files files) {
+        AuthUtils.requireLogin();
         trainService.updateById(files);
         flushRedis(Constants.FILES_KEY);
         return Result.success();

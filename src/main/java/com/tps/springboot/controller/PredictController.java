@@ -3,6 +3,7 @@ package com.tps.springboot.controller;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
 import com.tps.springboot.service.IPredictService;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,7 @@ public class PredictController {
 
     @PostMapping("/upload")
     public Result upload(@RequestParam MultipartFile file) throws Exception {
+        AuthUtils.requireLogin();
 
         if(null == file)
         {
@@ -40,6 +42,7 @@ public class PredictController {
    // @Async
     @GetMapping("/getUrl/{url}")
     public Result beginPredict(@PathVariable String url) throws IOException {
+        AuthUtils.requireLogin();
         System.out.println("开始多线程,在线预测 + url");
         // 根据文件的唯一标识码获取文件
         long stime = System.currentTimeMillis();
@@ -65,6 +68,7 @@ public class PredictController {
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") String name) {
+        AuthUtils.requireLogin();
 
         return Result.success(predictService.findPage(pageNum,pageSize,name));
     }
@@ -72,6 +76,7 @@ public class PredictController {
     @Transactional
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         predictService.deletePredictData(id);
         return Result.success();
     }
@@ -79,24 +84,28 @@ public class PredictController {
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        AuthUtils.requireLogin();
         predictService.deleteBatch(ids);
         return Result.success();
     }
 
     @GetMapping("/detail/{id}")
     public Result getById(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
 
         return Result.success(predictService.getById(id));
     }
 
     @GetMapping("/totle")
     public Result totle() {
+        AuthUtils.requireLogin();
 
         return Result.success(predictService.predictTotle());
     }
 
     @GetMapping("/members/{id}")
     public Result members(@PathVariable Integer id) throws IOException {
+        AuthUtils.requireLogin();
 
         return Result.success(predictService.getMalfunctionCount(id));
     }
@@ -106,6 +115,7 @@ public class PredictController {
 
     @GetMapping("/totle/{id}")
     public Result totle(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         return Result.success(predictService.getCountByFileId(id));
     }
 

@@ -8,6 +8,7 @@ import com.tps.springboot.entity.Message;
 import com.tps.springboot.mapper.MessageMapper;
 import com.tps.springboot.mapper.UserMapper;
 import com.tps.springboot.service.MessageService;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -31,11 +32,13 @@ public class MessageController {
 
     @PostMapping("/send")
     public Result save(@RequestBody Message message) {
+        AuthUtils.requireLogin();
         messageService.saveMessage(message);
         return Result.success();
     }
     @PostMapping("/sendToUpdate")
     public Result update(@RequestBody Message message) {
+        AuthUtils.requireLogin();
         messageService.updateMessage(message);
         return Result.success();
     }
@@ -46,6 +49,7 @@ public class MessageController {
      */
     @GetMapping("/getUserName")
     public Result getUserName() {
+        AuthUtils.requireLogin();
         return Result.success(userMapper.selectList(new QueryWrapper<>()));
     }
 
@@ -53,6 +57,7 @@ public class MessageController {
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") String sendUserName) {
+        AuthUtils.requireLogin();
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
         //queryWrapper.eq("is_delete", false);
        // queryWrapper.orderByDesc("id");
@@ -65,6 +70,7 @@ public class MessageController {
 
     @GetMapping("/findById/{id}")
     public Result findById(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         LambdaQueryWrapper<Message> messageLambdaQueryWrapper = new LambdaQueryWrapper<>();
         messageLambdaQueryWrapper.eq(Message::getId,id);
         Message message = messageMapper.selectOne(messageLambdaQueryWrapper);

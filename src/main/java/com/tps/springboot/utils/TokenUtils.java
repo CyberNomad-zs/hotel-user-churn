@@ -3,6 +3,7 @@ package com.tps.springboot.utils;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.tps.springboot.entity.User;
 import com.tps.springboot.service.IUserService;
@@ -51,7 +52,13 @@ public class TokenUtils {
             System.out.println("=================="+token);
             if (StrUtil.isNotBlank(token)) {
                 String userId = JWT.decode(token).getAudience().get(0);
-                return staticUserService.getById(Integer.valueOf(userId));
+                User user = staticUserService.getById(Integer.valueOf(userId));
+                if (user == null) {
+                    return null;
+                }
+                JWTVerifier jwtVerifier = JWT.require(Algorithm.HMAC256(user.getPassword())).build();
+                jwtVerifier.verify(token);
+                return user;
             }
         } catch (Exception e) {
             return null;

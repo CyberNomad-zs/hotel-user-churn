@@ -9,6 +9,7 @@ import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.Files;
 import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.mapper.FileMapper;
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -52,6 +53,7 @@ public class FileController {
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
+        AuthUtils.requireLogin();
         String originalFilename = getSafeFileName(file.getOriginalFilename());
         File uploadFile = resolveUploadFile(originalFilename);
         File parentFile = uploadFile.getParentFile();
@@ -100,6 +102,7 @@ public class FileController {
 //    @CachePut(value = "files", key = "'frontAll'")
     @PostMapping("/update")
     public Result update(@RequestBody Files files) {
+        AuthUtils.requireLogin();
         System.out.println("cccc"+files.getName());
         fileMapper.updateById(files);
         flushRedis(Constants.FILES_KEY);
@@ -108,6 +111,7 @@ public class FileController {
 
     @GetMapping("/detail/{id}")
     public Result getById(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         return Result.success(fileMapper.selectById(id));
     }
 
@@ -115,6 +119,7 @@ public class FileController {
 //    @CacheEvict(value="files",key="'frontAll'")
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         fileMapper.deleteById(id);
         flushRedis(Constants.FILES_KEY);
         return Result.success();
@@ -122,6 +127,7 @@ public class FileController {
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        AuthUtils.requireLogin();
         // select * from sys_file where id in (id,id,id...)
         QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
         queryWrapper.in("id", ids);
@@ -142,6 +148,7 @@ public class FileController {
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") String name) {
+        AuthUtils.requireLogin();
         QueryWrapper<Files> queryWrapper = new QueryWrapper<>();
         // 查询未删除的记录
         queryWrapper.eq("is_delete", false);

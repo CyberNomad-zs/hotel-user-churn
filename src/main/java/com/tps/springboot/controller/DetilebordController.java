@@ -8,6 +8,7 @@ import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.OnlineDate;
 import com.tps.springboot.mapper.ResultMapper;
 
+import com.tps.springboot.utils.AuthUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,6 +37,7 @@ public class DetilebordController {
 
     @GetMapping("/detail/{id}")
     public Result getById(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         return Result.success(resultMapper.selectById(id));
     }
 
@@ -43,6 +45,7 @@ public class DetilebordController {
 //    @CacheEvict(value="files",key="'frontAll'")
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        AuthUtils.requireLogin();
         resultMapper.deleteById(id);
         flushRedis(Constants.FILES_KEY);
         return Result.success();
@@ -50,6 +53,7 @@ public class DetilebordController {
 
     @GetMapping("/totle")
     public Result totle() {
+        AuthUtils.requireLogin();
         List<OnlineDate> onlinedates = resultMapper.selectList(new QueryWrapper<OnlineDate>());
         String today = DateUtil.today();
         Integer totle=0;
@@ -66,6 +70,7 @@ public class DetilebordController {
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        AuthUtils.requireLogin();
         // select * from sys_file where id in (id,id,id...)
         QueryWrapper<OnlineDate> queryWrapper = new QueryWrapper<>();
         queryWrapper.in("id", ids);
@@ -89,6 +94,7 @@ public class DetilebordController {
                            @RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") Integer result) {
+        AuthUtils.requireLogin();
         //LambdaQueryWrapper<OnlineDate> queryWrapper = new LambdaQueryWrapper<>();
         QueryWrapper<OnlineDate> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("testfile_id",id);
@@ -116,6 +122,7 @@ public class DetilebordController {
     public Result findPage(@RequestParam Integer pageNum,
                            @RequestParam Integer pageSize,
                            @RequestParam(defaultValue = "") Integer result) {
+        AuthUtils.requireLogin();
         //LambdaQueryWrapper<OnlineDate> queryWrapper = new LambdaQueryWrapper<>();
         QueryWrapper<OnlineDate> queryWrapper = new QueryWrapper<>();
         //queryWrapper.eq("testfile_id",id);

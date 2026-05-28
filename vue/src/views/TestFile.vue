@@ -6,7 +6,7 @@
             <el-button type="warning" @click="reset">重置</el-button>
         </div>
         <div style="margin: 10px 0">
-            <el-upload :action="'http://' + serverIp + ':9090/DataTest/upload'" :show-file-list="false" accept="xlsx"
+            <el-upload :action="'http://' + serverIp + ':9090/DataTest/upload'" :headers="uploadHeaders" :show-file-list="false" accept="xlsx"
                        :on-success="handleFileUploadSuccess" style="display: inline-block">
                 <el-button type="primary" class="ml-5">上传文件 <i class="el-icon-top"></i></el-button>
             </el-upload>
@@ -112,6 +112,12 @@
         },
         created() {
             this.load()
+        },
+        computed: {
+            uploadHeaders() {
+                const user = localStorage.getItem("user") ? JSON.parse(localStorage.getItem("user")) : null
+                return user && user.token ? { token: user.token } : {}
+            }
         },
         methods: {
             load() {
