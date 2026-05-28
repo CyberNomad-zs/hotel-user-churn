@@ -1,11 +1,13 @@
 package com.tps.springboot.controller;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.Files;
+import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.mapper.FileMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +21,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -49,8 +52,8 @@ public class FileController {
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        File uploadFile = new File(fileUploadPath + originalFilename);
+        String originalFilename = getSafeFileName(file.getOriginalFilename());
+        File uploadFile = resolveUploadFile(originalFilename);
         File parentFile = uploadFile.getParentFile();
         if(!parentFile.exists()) {
             parentFile.mkdirs();
@@ -70,7 +73,7 @@ public class FileController {
     @GetMapping("/{fileUUID}")
     public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(fileUploadPath + fileUUID);;
+        File uploadFile = resolveUploadFile(fileUUID);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
         response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
@@ -156,6 +159,28 @@ public class FileController {
     // 删除缓存
     private void flushRedis(String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    private File resolveUploadFile(String fileName) throws IOException {
+        String safeFileName = getSafeFileName(fileName);
+        File uploadDir = new File(fileUploadPath);
+        Path uploadRoot = uploadDir.getCanonicalFile().toPath();
+        File uploadFile = new File(uploadDir, safeFileName);
+        Path resolvedPath = uploadFile.getCanonicalFile().toPath();
+        if (!resolvedPath.startsWith(uploadRoot)) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return uploadFile;
+    }
+
+    private String getSafeFileName(String fileName) {
+        if (StrUtil.isBlank(fileName)
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return fileName;
     }
 
 }

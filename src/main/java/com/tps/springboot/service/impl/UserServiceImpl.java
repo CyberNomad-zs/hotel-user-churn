@@ -1,6 +1,7 @@
 package com.tps.springboot.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -107,6 +108,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     @Override
     public void saveUpdateUser(User user) {
+        normalizePassword(user);
         LambdaQueryWrapper<Role> roleLambdaQueryWrapper = new LambdaQueryWrapper<>();
         String role = user.getRole();
         roleLambdaQueryWrapper.eq(Role::getFlag,role);
@@ -119,6 +121,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             userMapper.insert(user);
         }
         userMapper.updateById(user);
+    }
+
+    private void normalizePassword(User user) {
+        User existingUser = null;
+        if (user.getId() != null) {
+            existingUser = userMapper.selectById(user.getId());
+        }
+
+        String password = user.getPassword();
+        if (StrUtil.isBlank(password)) {
+            if (existingUser == null) {
+                throw new ServiceException(Constants.CODE_400, "密码不能为空");
+            }
+            user.setPassword(existingUser.getPassword());
+            return;
+        }
+
+        if (existingUser != null && password.equals(existingUser.getPassword())) {
+            return;
+        }
+
+        user.setPassword(SecureUtil.md5(password));
     }
 
 

@@ -2,15 +2,17 @@ package com.tps.springboot.utils;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import com.tps.springboot.common.Constants;
+import com.tps.springboot.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.Path;
 import java.util.UUID;
 
 
@@ -34,7 +36,7 @@ public final  class FileUtils {
         }
 
         String fileName = uuid + StrUtil.DOT + type;
-        File uploadFile = new File(path + fileName);
+        File uploadFile = new File(path, fileName);
         // 判断配置的文件目录是否存在，若不存在则创建一个新的文件目录
         File parentFile = uploadFile.getParentFile();
         if (!parentFile.exists()) {
@@ -54,7 +56,7 @@ public final  class FileUtils {
     public static void downloadResultFile(String fileName,String srcFilePath, HttpServletResponse response) throws IOException {
         System.out.println(fileName);
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(srcFilePath+fileName);
+        File uploadFile = resolveSafeFile(srcFilePath, fileName);
         System.out.println(uploadFile);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
@@ -80,5 +82,27 @@ public final  class FileUtils {
         System.out.println("下载成功");
         os.flush();
         os.close();
+    }
+
+    private static File resolveSafeFile(String srcFilePath, String fileName) throws IOException {
+        String safeFileName = getSafeFileName(fileName);
+        File uploadDir = new File(srcFilePath);
+        Path uploadRoot = uploadDir.getCanonicalFile().toPath();
+        File uploadFile = new File(uploadDir, safeFileName);
+        Path resolvedPath = uploadFile.getCanonicalFile().toPath();
+        if (!resolvedPath.startsWith(uploadRoot)) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return uploadFile;
+    }
+
+    private static String getSafeFileName(String fileName) {
+        if (StrUtil.isBlank(fileName)
+                || fileName.contains("/")
+                || fileName.contains("\\")
+                || fileName.contains("..")) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return fileName;
     }
 }
