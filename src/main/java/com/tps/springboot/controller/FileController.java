@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
+import com.tps.springboot.config.AuthAccess;
 import com.tps.springboot.entity.Files;
+import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.mapper.FileMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +22,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -49,15 +55,15 @@ public class FileController {
      */
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
-        String originalFilename = file.getOriginalFilename();
-        File uploadFile = new File(fileUploadPath + originalFilename);
+        String filename = sanitizeFilename(file.getOriginalFilename());
+        File uploadFile = resolveUploadFile(filename);
         File parentFile = uploadFile.getParentFile();
         if(!parentFile.exists()) {
             parentFile.mkdirs();
         }
         String url;
         file.transferTo(uploadFile);
-        url = "http://" + serverIp + ":9090/file/" + originalFilename;
+        url = "http://" + serverIp + ":9090/file/" + encodePathSegment(filename);
         flushRedis(Constants.FILES_KEY);
         return url;
     }
@@ -67,13 +73,19 @@ public class FileController {
      * @param response
      * @throws IOException
      */
+    @AuthAccess
     @GetMapping("/{fileUUID}")
     public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
+        String filename = sanitizeFilename(fileUUID);
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(fileUploadPath + fileUUID);;
+        File uploadFile = resolveUploadFile(filename);
+        if (!uploadFile.isFile()) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
-        response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
+        response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(filename, "UTF-8"));
         response.setContentType("application/octet-stream");
 
         // 读取文件的字节流
@@ -156,6 +168,34 @@ public class FileController {
     // 删除缓存
     private void flushRedis(String key) {
         stringRedisTemplate.delete(key);
+    }
+
+    private String sanitizeFilename(String filename) {
+        if (!StringUtils.hasText(filename)) {
+            throw new ServiceException(Constants.CODE_400, "文件名不能为空");
+        }
+        String cleanFilename = StringUtils.cleanPath(filename);
+        if (filename.contains("/") || filename.contains("\\") || cleanFilename.contains("..")) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+        return cleanFilename;
+    }
+
+    private File resolveUploadFile(String filename) throws IOException {
+        try {
+            Path basePath = Paths.get(fileUploadPath).toAbsolutePath().normalize();
+            Path targetPath = basePath.resolve(filename).normalize();
+            if (!targetPath.startsWith(basePath)) {
+                throw new ServiceException(Constants.CODE_400, "非法文件路径");
+            }
+            return targetPath.toFile();
+        } catch (InvalidPathException e) {
+            throw new ServiceException(Constants.CODE_400, "非法文件名");
+        }
+    }
+
+    private String encodePathSegment(String filename) throws IOException {
+        return URLEncoder.encode(filename, "UTF-8").replace("+", "%20");
     }
 
 }
