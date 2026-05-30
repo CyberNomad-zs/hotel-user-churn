@@ -6,7 +6,7 @@
       <el-button type="warning" @click="reset">重置</el-button>
     </div>
     <div style="margin: 10px 0">
-      <el-upload :action="'http://' + serverIp + ':9090/python/upload'" :show-file-list="false" accept="xlsx"
+      <el-upload :action="'http://' + serverIp + ':9090/python/upload'" :headers="uploadHeaders" :show-file-list="false" accept="xlsx"
                  :on-success="handleFileUploadSuccess" style="display: inline-block">
         <el-button type="primary" class="ml-5">上传文件 <i class="el-icon-top"></i></el-button>
       </el-upload>
@@ -103,12 +103,14 @@
 
 <script>
   import {serverIp} from "../../public/config";
+import {downloadFile} from "@/utils/download";
 
   export default {
     name: "File",
     data() {
       return {
         serverIp: serverIp,
+        uploadHeaders: { token: (JSON.parse(localStorage.getItem("user") || "{}").token) },
         tableData: [],
         name: '',
         multipleSelection: [],
@@ -191,13 +193,11 @@
         this.load()
       },
       download(pythonurl) {
-        pythonurl = "http://localhost:9090/python/" + pythonurl
-        window.open(pythonurl)
+        downloadFile("/python/modeldownload/" + pythonurl)
         this.$router.push('/File')
       },
       downloadanalysis(report) {
-        report = "http://localhost:9090/python/download"
-        window.open(report)
+        downloadFile("/python/download/" + report)
         this.$router.push('/File')
       },
       analyze(url) {

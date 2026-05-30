@@ -1,6 +1,7 @@
 <template>
     <el-upload
             :action="'http://' + serverIp + ':9090/python/upload'"
+            :headers="uploadHeaders"
             :on-success="onSuccess"
             class="upload-demo"
             drag
@@ -18,6 +19,7 @@ import {serverIp} from "../../public/config";
         data() {
             return {
                 serverIp: serverIp,
+                uploadHeaders: { token: (JSON.parse(localStorage.getItem("user") || "{}").token) },
             }
         },
         methods: {

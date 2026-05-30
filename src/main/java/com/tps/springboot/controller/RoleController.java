@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Result;
 import com.tps.springboot.entity.Role;
 import com.tps.springboot.service.IRoleService;
+import com.tps.springboot.utils.TokenUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -27,17 +28,20 @@ public class RoleController {
     // 新增或者更新
     @PostMapping
     public Result save(@RequestBody Role role) {
+        TokenUtils.requireAdmin();
         roleService.saveOrUpdate(role);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         roleService.removeById(id);
         return Result.success();
     }
     @GetMapping("/totle")
     public Result totle() {
+        TokenUtils.requireAdmin();
         LambdaQueryWrapper<Role> roleLambdaQueryWrapper = new LambdaQueryWrapper<>();
         long count = roleService.count(roleLambdaQueryWrapper);
         System.out.println(count);
@@ -46,17 +50,20 @@ public class RoleController {
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        TokenUtils.requireAdmin();
         roleService.removeByIds(ids);
         return Result.success();
     }
 
     @GetMapping
     public Result findAll() {
+        TokenUtils.requireAdmin();
         return Result.success(roleService.list());
     }
 
     @GetMapping("/{id}")
     public Result findOne(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         return Result.success(roleService.getById(id));
     }
 
@@ -64,6 +71,7 @@ public class RoleController {
     public Result findPage(@RequestParam String name,
                            @RequestParam Integer pageNum,
                            @RequestParam Integer pageSize) {
+        TokenUtils.requireAdmin();
         QueryWrapper<Role> queryWrapper = new QueryWrapper<>();
         queryWrapper.like("name", name);
         queryWrapper.orderByDesc("id");
@@ -78,12 +86,14 @@ public class RoleController {
      */
     @PostMapping("/roleMenu/{roleId}")
     public Result roleMenu(@PathVariable Integer roleId, @RequestBody List<Integer> menuIds) {
+        TokenUtils.requireAdmin();
         roleService.setRoleMenu(roleId, menuIds);
         return Result.success();
     }
 
     @GetMapping("/roleMenu/{roleId}")
     public Result getRoleMenu(@PathVariable Integer roleId) {
+        TokenUtils.requireAdmin();
         return Result.success( roleService.getRoleMenu(roleId));
     }
 
