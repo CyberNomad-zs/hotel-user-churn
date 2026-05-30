@@ -16,6 +16,8 @@ import com.tps.springboot.service.IRoleService;
 import com.tps.springboot.service.IUserService;
 import com.tps.springboot.controller.dto.UserDTO;
 import com.tps.springboot.controller.dto.UserPasswordDTO;
+import com.tps.springboot.exception.ServiceException;
+import com.tps.springboot.utils.TokenUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -70,8 +72,17 @@ public class UserController {
     // 新增或者更新
     @PostMapping("/saveUpdateUser")
     public Result saveUpdateUser(@RequestBody User user) {
-
-        user.setPassword(SecureUtil.md5(user.getPassword()));
+        User currentUser = TokenUtils.requireCurrentUser();
+        if (TokenUtils.isAdmin(currentUser)) {
+            user.setPassword(SecureUtil.md5(user.getPassword()));
+        } else {
+            if (user.getId() == null || !user.getId().equals(currentUser.getId())) {
+                throw new ServiceException(Constants.CODE_401, "权限不足");
+            }
+            user.setRole(currentUser.getRole());
+            user.setRoleid(currentUser.getRoleid());
+            user.setPassword(currentUser.getPassword());
+        }
         userService.saveUpdateUser(user);
         return Result.success();
     }
@@ -92,21 +103,25 @@ public class UserController {
 
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         return Result.success(userService.removeById(id));
     }
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        TokenUtils.requireAdmin();
         return Result.success(userService.removeByIds(ids));
     }
 
     @GetMapping
     public Result findAll() {
+        TokenUtils.requireAdmin();
         return Result.success(userService.list());
     }
 
     @GetMapping("/role/{role}")
     public Result findUsersByRole(@PathVariable String role) {
+        TokenUtils.requireAdmin();
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("role", role);
         List<User> list = userService.list(queryWrapper);
@@ -115,11 +130,16 @@ public class UserController {
 
     @GetMapping("/{id}")
     public Result findOne(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         return Result.success(userService.getById(id));
     }
 
     @GetMapping("/username/{username}")
     public Result findByUsername(@PathVariable String username) {
+        User currentUser = TokenUtils.requireCurrentUser();
+        if (!TokenUtils.isAdmin(currentUser) && !username.equals(currentUser.getUsername())) {
+            throw new ServiceException(Constants.CODE_401, "权限不足");
+        }
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username);
         return Result.success(userService.getOne(queryWrapper));
@@ -132,6 +152,7 @@ public class UserController {
                                @RequestParam(defaultValue = "") String email,
                                @RequestParam(defaultValue = "") String address) {
 
+        TokenUtils.requireAdmin();
 //        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 //        queryWrapper.orderByDesc("id");
 //        if (!"".equals(username)) {
@@ -149,10 +170,12 @@ public class UserController {
 
     @GetMapping("/getUserName")
     public Result getUserName() {
+        TokenUtils.requireAdmin();
         return Result.success(userService.list());
     }
     @GetMapping("/totle")
     public Result totle() {
+        TokenUtils.requireAdmin();
         List<User> list = userService.list();
         for (User user : list) {
             Date createTime = user.getCreateTime();
@@ -165,6 +188,7 @@ public class UserController {
      */
     @GetMapping("/export")
     public void export(HttpServletResponse response) throws Exception {
+        TokenUtils.requireAdmin();
         // 从数据库查询出所有的数据
         List<User> list = userService.list();
         // 通过工具类创建writer 写出到磁盘路径
@@ -203,6 +227,7 @@ public class UserController {
      */
     @PostMapping("/import")
     public Result imp(MultipartFile file) throws Exception {
+        TokenUtils.requireAdmin();
         InputStream inputStream = file.getInputStream();
         ExcelReader reader = ExcelUtil.getReader(inputStream);
         // 方式1：(推荐) 通过 javabean的方式读取Excel内的对象，但是要求表头必须是英文，跟javabean的属性要对应起来

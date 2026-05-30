@@ -4,7 +4,10 @@ import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.tps.springboot.common.Constants;
+import com.tps.springboot.common.RoleEnum;
 import com.tps.springboot.entity.User;
+import com.tps.springboot.exception.ServiceException;
 import com.tps.springboot.service.IUserService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -57,6 +60,24 @@ public class TokenUtils {
             return null;
         }
         return null;
+    }
+
+    public static User requireCurrentUser() {
+        User user = getCurrentUser();
+        if (user == null) {
+            throw new ServiceException(Constants.CODE_401, "无权限");
+        }
+        return user;
+    }
+
+    public static boolean isAdmin(User user) {
+        return user != null && RoleEnum.ROLE_ADMIN.name().equals(user.getRole());
+    }
+
+    public static void requireAdmin() {
+        if (!isAdmin(requireCurrentUser())) {
+            throw new ServiceException(Constants.CODE_401, "权限不足");
+        }
     }
 
 }

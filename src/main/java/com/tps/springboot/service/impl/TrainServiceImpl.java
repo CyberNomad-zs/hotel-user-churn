@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.IOException;
 
 
@@ -108,6 +109,8 @@ public class TrainServiceImpl  implements ITrainService {
 
         //读取文件开始训练
         String trainModelFileName = url.replace("csv", "jobli");
+        File trainFile = FileUtils.resolveFileInBase(config.getTrainFilePath(), url);
+        File trainModelFile = FileUtils.resolveFileInBase(config.getTrainFilePath(), trainModelFileName);
 //        if(type != null && type.equals("modelDT"))
 //            trainModelFileName = url.replace("csv", "jobli");
 //        if(type != null && type.equals("modelRF"))
@@ -116,8 +119,8 @@ public class TrainServiceImpl  implements ITrainService {
         try {
             String[] arguments = new String[] {config.getPythonInterpreter(),
                     config.getPythonTrianCode(),
-                    config.getTrainFilePath()+url,
-                    config.getTrainFilePath()+trainModelFileName,type};
+                    trainFile.getAbsolutePath(),
+                    trainModelFile.getAbsolutePath(),type};
 
             int i = PythonUtils.trainByPython(arguments);
 
@@ -139,10 +142,11 @@ public class TrainServiceImpl  implements ITrainService {
     @Override
     public Result dataAnalyze(String url) throws IOException{
 
+        File trainFile = FileUtils.resolveFileInBase(config.getTrainFilePath(), url);
         try {
             String[] arguments = new String[] {config.getPythonInterpreter(),
                     config.getPythonEDAAnalyzeCode(),
-                    config.getTrainFilePath()+url};
+                    trainFile.getAbsolutePath()};
 
             int i = PythonUtils.trainByPython(arguments);
 
@@ -171,6 +175,8 @@ public class TrainServiceImpl  implements ITrainService {
         }
 
         String modelAnalysisFileName = url.replace(".csv", "report.txt");
+        File trainFile = FileUtils.resolveFileInBase(config.getTrainFilePath(), url);
+        FileUtils.resolveFileInBase(config.getTrainFilePath(), modelAnalysisFileName);
 //        try {
 //            String[] arguments = new String[] {config.getPythonInterpreter(),
 //                    config.getPythonAnalyzeCode(),
@@ -179,7 +185,7 @@ public class TrainServiceImpl  implements ITrainService {
         try {
             String[] arguments = new String[] {config.getPythonInterpreter(),
                     config.getPythonAnalyzeCode(),
-                    config.getTrainFilePath()+url,
+                    trainFile.getAbsolutePath(),
                     config.getTrainFilePath(),
                     modelAnalysisFileName
             };

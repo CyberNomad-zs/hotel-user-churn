@@ -2,6 +2,8 @@ package com.tps.springboot.utils;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import com.tps.springboot.common.Constants;
+import com.tps.springboot.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -11,6 +13,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 
@@ -28,13 +33,10 @@ public final  class FileUtils {
 
         String type = FileUtil.extName(file.getOriginalFilename());
         // 定义一个文件唯一的标识码
-        String uuid = "";
-        synchronized (uuid) {
-            uuid = (UUID.randomUUID().toString()).replace("-", "");
-        }
+        String uuid = (UUID.randomUUID().toString()).replace("-", "");
 
         String fileName = uuid + StrUtil.DOT + type;
-        File uploadFile = new File(path + fileName);
+        File uploadFile = resolveFileInBase(path, fileName);
         // 判断配置的文件目录是否存在，若不存在则创建一个新的文件目录
         File parentFile = uploadFile.getParentFile();
         if (!parentFile.exists()) {
@@ -51,10 +53,26 @@ public final  class FileUtils {
         return fileName;
     }
 
+    public static File resolveFileInBase(String srcFilePath, String fileName) throws FileNotFoundException {
+        if (StrUtil.isBlank(srcFilePath) || StrUtil.isBlank(fileName)) {
+            throw new ServiceException(Constants.CODE_400, "文件路径不能为空");
+        }
+        try {
+            Path basePath = Paths.get(srcFilePath).toAbsolutePath().normalize();
+            Path uploadFilePath = basePath.resolve(fileName).normalize();
+            if (!uploadFilePath.startsWith(basePath)) {
+                throw new ServiceException(Constants.CODE_400, "非法文件路径");
+            }
+            return uploadFilePath.toFile();
+        } catch (InvalidPathException e) {
+            throw new ServiceException(Constants.CODE_400, "非法文件路径");
+        }
+    }
+
     public static void downloadResultFile(String fileName,String srcFilePath, HttpServletResponse response) throws IOException {
         System.out.println(fileName);
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(srcFilePath+fileName);
+        File uploadFile = resolveFileInBase(srcFilePath, fileName);
         System.out.println(uploadFile);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();

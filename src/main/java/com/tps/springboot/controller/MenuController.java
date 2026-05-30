@@ -8,6 +8,7 @@ import com.tps.springboot.entity.Dict;
 import com.tps.springboot.entity.Menu;
 import com.tps.springboot.mapper.DictMapper;
 import com.tps.springboot.service.IMenuService;
+import com.tps.springboot.utils.TokenUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,34 +34,40 @@ public class MenuController {
     // 新增或者更新
     @PostMapping
     public Result save(@RequestBody Menu menu) {
+        TokenUtils.requireAdmin();
         menuService.saveOrUpdate(menu);
         return Result.success();
     }
 
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         menuService.removeById(id);
         return Result.success();
     }
 
     @PostMapping("/del/batch")
     public Result deleteBatch(@RequestBody List<Integer> ids) {
+        TokenUtils.requireAdmin();
         menuService.removeByIds(ids);
         return Result.success();
     }
 
     @GetMapping("/ids")
     public Result findAllIds() {
+        TokenUtils.requireAdmin();
         return Result.success(menuService.list().stream().map(Menu::getId));
     }
 
     @GetMapping
     public Result findAll(@RequestParam(defaultValue = "") String name) {
+        TokenUtils.requireAdmin();
         return Result.success(menuService.findMenus(name));
     }
 
     @GetMapping("/{id}")
     public Result findOne(@PathVariable Integer id) {
+        TokenUtils.requireAdmin();
         return Result.success(menuService.getById(id));
     }
 
@@ -68,6 +75,7 @@ public class MenuController {
     public Result findPage(@RequestParam String name,
                            @RequestParam Integer pageNum,
                            @RequestParam Integer pageSize) {
+        TokenUtils.requireAdmin();
         QueryWrapper<Menu> queryWrapper = new QueryWrapper<>();
         queryWrapper.like("name", name);
         queryWrapper.orderByDesc("id");
@@ -76,6 +84,7 @@ public class MenuController {
 
     @GetMapping("/icons")
     public Result getIcons() {
+        TokenUtils.requireAdmin();
         QueryWrapper<Dict> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("type", Constants.DICT_TYPE_ICON);
         return Result.success(dictMapper.selectList(queryWrapper));

@@ -27,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -74,13 +75,15 @@ public class PredictServiceImpl  implements IPredictService {
 
         //读取文件开始训练
         String predictResultFileName = url.replace("csv", "json");
+        File predictFile = FileUtils.resolveFileInBase(config.getPredictFilePath(), url);
+        File predictResultFile = FileUtils.resolveFileInBase(config.getPredictFilePath(), predictResultFileName);
 
         try {
 
             String[] arguments = new String[] {config.getPythonInterpreter(),
                     config.getPythonPredictCode(),
-                    config.getPredictFilePath()+url,
-                    config.getPredictFilePath()+predictResultFileName
+                    predictFile.getAbsolutePath(),
+                    predictResultFile.getAbsolutePath()
                     //config.getPredictModelPath()
             };
 
@@ -101,7 +104,7 @@ public class PredictServiceImpl  implements IPredictService {
 
         //读取json，解析
       HashMap<String,Integer> resultMap = (HashMap<String, Integer>) JsonUtils.readJsonFile
-              (config.getPredictFilePath()+predictResultFileName);
+              (predictResultFile.getAbsolutePath());
         //将本次结果入库 sys_result
         resultMap.forEach((key, value) -> {
             OnlineDate record = new OnlineDate();

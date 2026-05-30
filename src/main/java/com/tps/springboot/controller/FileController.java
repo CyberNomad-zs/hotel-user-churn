@@ -1,12 +1,15 @@
 package com.tps.springboot.controller;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.tps.springboot.common.Constants;
 import com.tps.springboot.common.Result;
+import com.tps.springboot.config.AuthAccess;
 import com.tps.springboot.entity.Files;
 import com.tps.springboot.mapper.FileMapper;
+import com.tps.springboot.utils.FileUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 文件上传相关接口
@@ -50,14 +54,19 @@ public class FileController {
     @PostMapping("/upload")
     public String upload(@RequestParam MultipartFile file) throws IOException {
         String originalFilename = file.getOriginalFilename();
-        File uploadFile = new File(fileUploadPath + originalFilename);
+        String type = FileUtil.extName(originalFilename);
+        String fileName = UUID.randomUUID().toString().replace("-", "");
+        if (StrUtil.isNotBlank(type)) {
+            fileName = fileName + "." + type;
+        }
+        File uploadFile = FileUtils.resolveFileInBase(fileUploadPath, fileName);
         File parentFile = uploadFile.getParentFile();
         if(!parentFile.exists()) {
             parentFile.mkdirs();
         }
         String url;
         file.transferTo(uploadFile);
-        url = "http://" + serverIp + ":9090/file/" + originalFilename;
+        url = "http://" + serverIp + ":9090/file/" + fileName;
         flushRedis(Constants.FILES_KEY);
         return url;
     }
@@ -68,9 +77,10 @@ public class FileController {
      * @throws IOException
      */
     @GetMapping("/{fileUUID}")
+    @AuthAccess
     public void download(@PathVariable String fileUUID, HttpServletResponse response) throws IOException {
         // 根据文件的唯一标识码获取文件
-        File uploadFile = new File(fileUploadPath + fileUUID);;
+        File uploadFile = FileUtils.resolveFileInBase(fileUploadPath, fileUUID);
         // 设置输出流的格式
         ServletOutputStream os = response.getOutputStream();
         response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileUUID, "UTF-8"));
