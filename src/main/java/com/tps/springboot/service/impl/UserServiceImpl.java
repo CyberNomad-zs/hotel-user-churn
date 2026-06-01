@@ -1,6 +1,7 @@
 package com.tps.springboot.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -112,13 +113,31 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         roleLambdaQueryWrapper.eq(Role::getFlag,role);
         Integer roleid = roleMapper.selectOne(roleLambdaQueryWrapper).getId();
         user.setRoleid(roleid);
-        LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getId,user.getId());
-        List<User> users = userMapper.selectList(userLambdaQueryWrapper);
-        if (users.size()==0){
+
+        User existingUser = user.getId() == null ? null : userMapper.selectById(user.getId());
+        preparePasswordForSave(user, existingUser);
+        if (existingUser == null){
             userMapper.insert(user);
+            return;
         }
         userMapper.updateById(user);
+    }
+
+    static void preparePasswordForSave(User user, User existingUser) {
+        if (existingUser == null) {
+            if (StrUtil.isBlank(user.getPassword())) {
+                throw new ServiceException(Constants.CODE_400, "密码不能为空");
+            }
+            user.setPassword(SecureUtil.md5(user.getPassword()));
+            return;
+        }
+
+        if (StrUtil.isBlank(user.getPassword()) || user.getPassword().equals(existingUser.getPassword())) {
+            user.setPassword(null);
+            return;
+        }
+
+        user.setPassword(SecureUtil.md5(user.getPassword()));
     }
 
 

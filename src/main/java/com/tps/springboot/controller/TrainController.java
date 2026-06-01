@@ -79,7 +79,7 @@ public class TrainController  {
         // 计算执行时间
         System.out.printf("执行时长：%d 毫秒.", (etime - statTime));
         System.out.println("结束多线程,模型训练结束");
-        return Result.success();
+        return result;
     }
 
 
