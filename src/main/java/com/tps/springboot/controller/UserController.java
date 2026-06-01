@@ -71,7 +71,6 @@ public class UserController {
     @PostMapping("/saveUpdateUser")
     public Result saveUpdateUser(@RequestBody User user) {
 
-        user.setPassword(SecureUtil.md5(user.getPassword()));
         userService.saveUpdateUser(user);
         return Result.success();
     }
